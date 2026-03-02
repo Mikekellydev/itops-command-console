@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sqlite3
+import subprocess
 from datetime import datetime
 from typing import List, Tuple, Optional
 
@@ -63,6 +64,7 @@ class PromptScreen(ModalScreen[Optional[str]]):
         self._default = default
 
     def compose(self) -> ComposeResult:
+        # Note: container id "box" comes from DEFAULT_CSS expectation
         yield Label(self._title, id="title")
         yield Input(placeholder=self._placeholder, id="inp")
         yield Label("Enter to submit. Esc to cancel.", id="hint")
@@ -86,7 +88,7 @@ class ITOpsDashboard(App):
     TITLE = "ITOps Enterprise Dashboard"
     SUB_TITLE = "SQLite Backed"
 
-    # Enterprise clean UI tweaks (reduces the heavy search outline)
+    # Enterprise clean UI (no heavy outline on search input)
     CSS = """
     Screen { background: #111111; }
 
@@ -94,8 +96,6 @@ class ITOpsDashboard(App):
         background: #0b2a4a;
         color: white;
     }
-
-    Horizontal { height: auto; }
 
     Input {
         border: none;
@@ -127,7 +127,7 @@ class ITOpsDashboard(App):
 
         with Horizontal():
             yield Label("Search:")
-            yield Input(placeholder="INC-1234", id="search")
+            yield Input(placeholder="Type part of INC-0001 or a word from title", id="search")
 
         table = DataTable(id="queue")
         table.cursor_type = "row"
@@ -140,9 +140,14 @@ class ITOpsDashboard(App):
         t.add_columns("Key", "Type", "Priority", "Severity", "Status", "Client", "Title")
         self.refresh_queue()
 
+        # Focus search so you can immediately type if you want.
+        self.query_one("#search", Input).focus()
+
     def refresh_queue(self) -> None:
         table = self.query_one("#queue", DataTable)
         table.clear()
+
+        search_val = self.query_one("#search", Input).value.strip()
 
         base = """
         SELECT record_key, record_type, priority, severity, status, client, title
@@ -150,11 +155,19 @@ class ITOpsDashboard(App):
         WHERE status IN ('New','In Progress','On Hold')
         """
 
+        params: List[str] = []
+
         if self.p12_only:
             base += " AND priority IN ('P1','P2')"
 
         if self.ic_view:
             base += " AND record_type='INC' AND severity IN ('SEV1','SEV2')"
+
+        if search_val:
+            # Search key/title/client
+            base += " AND (record_key LIKE ? OR title LIKE ? OR client LIKE ?)"
+            like = f"%{search_val}%"
+            params.extend([like, like, like])
 
         base += """
         ORDER BY
@@ -168,7 +181,7 @@ class ITOpsDashboard(App):
         opened_at ASC;
         """
 
-        rows = q(self.db_path, base, ())
+        rows = q(self.db_path, base, tuple(params))
 
         for r in rows:
             table.add_row(
@@ -208,6 +221,7 @@ class ITOpsDashboard(App):
         folder = row[0]
         if folder and os.path.isdir(folder):
             ticket = os.path.join(folder, "ticket.md")
+            # Open ticket in micro
             os.system(f'micro "{ticket}"')
         else:
             self.notify("Folder missing on disk", severity="warning")
@@ -312,37 +326,51 @@ class ITOpsDashboard(App):
         self.notify(f"Closed {record_key}")
         self.refresh_queue()
 
+    def on_input_changed(self, event: Input.Changed) -> None:
+        # Live filtering as you type in search box
+        if event.input.id == "search":
+            self.refresh_queue()
+
     async def on_key(self, event: events.Key) -> None:
         k = event.key.lower()
 
         if k == "q":
             self.exit()
             return
+
         if k == "r":
             self.refresh_queue()
             return
+
         if k == "p":
             self.p12_only = not self.p12_only
             self.refresh_queue()
             return
+
         if k == "i":
             self.ic_view = not self.ic_view
             self.refresh_queue()
             return
+
         if k == "o":
             self.open_ticket_folder()
             return
+
         if k == "x":
             self.resolve_record()
             return
+
         if k == "c":
             self.close_record()
             return
+
+        # IMPORTANT: run modal prompts from a worker to avoid NoActiveWorker
         if k == "n":
-            await self.add_worklog()
+            self.run_worker(self.add_worklog, exclusive=True)
             return
+
         if k == "h":
-            await self.set_hold()
+            self.run_worker(self.set_hold, exclusive=True)
             return
 
 
