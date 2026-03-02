@@ -1,5 +1,13 @@
 # ITOps Command Console
 
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
+![Language](https://img.shields.io/badge/python-3.10+-blue)
+![Database](https://img.shields.io/badge/database-SQLite-green)
+![UI](https://img.shields.io/badge/UI-Textual-purple)
+
+![Status](https://img.shields.io/badge/status-Active%20Development-brightgreen)
+
 A terminal-native operational command system designed to demonstrate structured systems thinking, clean architecture, and deterministic workflow control.
 
 Built with:
