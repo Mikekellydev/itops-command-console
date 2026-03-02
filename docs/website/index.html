@@ -5,29 +5,25 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>ITOps Command Console | Terminal-Native Operational Workflow</title>
+  <title>ITOps Command Console | Terminal Native Operational Workflow</title>
 
-  <!-- SEO Meta -->
-  <meta name="description" content="ITOps Command Console is a terminal-native operational workflow system built with SQLite, Python Textual, Bash, and tmux. Designed for deterministic, offline-first operational control." />
-  <meta name="keywords" content="ITOps, Terminal Dashboard, SQLite, Textual UI, tmux workflow, SysAdmin tools, DevOps portfolio project, offline task management" />
+  <meta name="description" content="ITOps Command Console is a terminal native operational workflow system built with SQLite, Python Textual, Bash, and tmux. Offline first. Deterministic. Built for operators." />
+  <meta name="keywords" content="ITOps, tmux, SQLite, Textual, sysadmin workflow, terminal dashboard, ops documentation" />
   <meta name="author" content="Michael Kelly" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://sparkwaveitservice.com/itops-command-console/" />
 
-  <!-- Open Graph (LinkedIn / Facebook) -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="ITOps Command Console" />
-  <meta property="og:description" content="A terminal-native operational command system built with SQLite, Bash, Textual, and tmux." />
+  <meta property="og:description" content="A terminal native ops command console built with tmux, SQLite, Textual, and Bash." />
   <meta property="og:url" content="https://sparkwaveitservice.com/itops-command-console/" />
   <meta property="og:image" content="https://sparkwaveitservice.com/itops-command-console/console-preview.png" />
 
-  <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="ITOps Command Console" />
-  <meta name="twitter:description" content="Terminal-native operational workflow engine demonstrating structured systems architecture." />
+  <meta name="twitter:description" content="Terminal native operational workflow engine demonstrating structured systems architecture." />
   <meta name="twitter:image" content="https://sparkwaveitservice.com/itops-command-console/console-preview.png" />
 
-  <!-- Structured Data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -35,11 +31,8 @@
     "name": "ITOps Command Console",
     "operatingSystem": "Linux",
     "applicationCategory": "DeveloperApplication",
-    "description": "Terminal-native operational workflow system built with SQLite, Python Textual, Bash, and tmux.",
-    "author": {
-      "@type": "Person",
-      "name": "Michael Kelly"
-    },
+    "description": "Terminal native operational workflow system built with SQLite, Python Textual, Bash, and tmux.",
+    "author": { "@type": "Person", "name": "Michael Kelly" },
     "url": "https://sparkwaveitservice.com/itops-command-console/"
   }
   </script>
@@ -50,71 +43,138 @@
 <body>
 
 <header>
-  <h1>ITOps Command Console</h1>
-  <p class="subtitle">Terminal-Native Operational Workflow System</p>
+  <div class="wrap">
+    <h1>ITOps Command Console</h1>
+    <p class="subtitle">Terminal Native Operational Workflow System</p>
+
+    <div class="cta-row">
+      <a class="btn primary" href="https://github.com/mikekellydev/itops-command-console" target="_blank" rel="noreferrer">View on GitHub</a>
+      <a class="btn" href="#install">Install</a>
+      <a class="btn" href="#use-cases">Use Cases</a>
+    </div>
+  </div>
 </header>
 
-<section>
-  <h2>Overview</h2>
-  <p>
-    ITOps Command Console is a lightweight, deterministic, offline-first
-    operational command system built using SQLite, Python (Textual), Bash,
-    and tmux.
-  </p>
-  <p>
-    It demonstrates structured systems architecture, lifecycle control,
-    and clean separation of concerns without reliance on cloud-based ticketing systems.
-  </p>
+<main>
+
+<section id="reasons">
+  <h2>Why This Exists</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Local First</h3>
+      <p>Your data stays on your machine. No SaaS dependency. Works offline.</p>
+    </div>
+    <div class="card">
+      <h3>Deterministic</h3>
+      <p>Explicit SQL, explicit states, explicit workflow. No hidden automation.</p>
+    </div>
+    <div class="card">
+      <h3>Operator Focused</h3>
+      <p>tmux console layout plus a Textual dashboard. Built for real daily use.</p>
+    </div>
+    <div class="card">
+      <h3>Documentation Built In</h3>
+      <p>Structured worklogs and markdown ticket folders support clean post incident writeups.</p>
+    </div>
+  </div>
 </section>
 
-<section>
-  <h2>Core Capabilities</h2>
-  <ul>
-    <li>Structured incident and service tracking</li>
-    <li>SQLite-backed data integrity</li>
-    <li>Textual-based terminal dashboard</li>
-    <li>CLI ticket creation tools</li>
-    <li>Deterministic lifecycle state management</li>
-    <li>tmux command console layout</li>
+<section id="use-cases">
+  <h2>Use Cases</h2>
+  <ul class="use-cases">
+    <li><strong>SysAdmin on call</strong> tracking incidents, decisions, and follow ups</li>
+    <li><strong>MSP operations</strong> lightweight client record tracking without SaaS overhead</li>
+    <li><strong>Homelab operator</strong> maintaining change history and troubleshooting notes</li>
+    <li><strong>IT leadership</strong> demonstrating operational discipline and workflow design in interviews</li>
+    <li><strong>Offline field work</strong> documenting service calls without connectivity</li>
   </ul>
 </section>
 
-<section>
-  <h2>Architecture</h2>
-  <pre>
-Database Layer (SQLite)
-      ↓
-CLI Intake Tools (Bash)
-      ↓
-Dashboard UI (Textual)
-      ↓
-tmux Command Console Layout
-  </pre>
+<section id="features">
+  <h2>Core Capabilities</h2>
+  <ul class="bullets">
+    <li>Record types: INC, SR, CHG, PRB, KB</li>
+    <li>SQLite backed queue with structured worklog entries</li>
+    <li>Auto increment record keys per type via counters table</li>
+    <li>tmux command console layout: dashboard plus daily log plus shell</li>
+    <li>Fast hotkeys for hold, worklog, resolve, close, and filtering</li>
+  </ul>
 </section>
 
-<section>
-  <h2>Design Philosophy</h2>
+<section id="install">
+  <h2>Install on Your Computer</h2>
+
+  <div class="notice">
+    <p><strong>Target platform</strong> Ubuntu LTS or WSL Ubuntu. Requires tmux, sqlite3, and Python 3.</p>
+  </div>
+
+  <h3>1. Install dependencies</h3>
+  <pre><code>sudo apt update
+sudo apt install -y git tmux sqlite3 python3 python3-venv</code></pre>
+
+  <h3>2. Clone the repository</h3>
+  <pre><code>git clone https://github.com/mikekellydev/itops-command-console.git
+cd itops-command-console</code></pre>
+
+  <h3>3. Create the Python environment for the dashboard</h3>
+  <pre><code>cd 95_Tools/dashboard
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install textual rich
+deactivate
+cd ../../</code></pre>
+
+  <h3>4. Create the ITOps directories</h3>
+  <pre><code>mkdir -p ~/ITOps/10_Tickets ~/ITOps/20_Areas/Daily ~/ITOps/80_Time/DB</code></pre>
+
+  <h3>5. Initialize the SQLite database</h3>
+  <pre><code>sqlite3 ~/ITOps/80_Time/DB/itops_enterprise.db ".tables"</code></pre>
+  <p class="small">If this is your first run, follow the schema in the repository docs to create tables.</p>
+
+  <h3>6. Install CLI commands</h3>
+  <pre><code>mkdir -p ~/.local/bin
+# Copy scripts from repo into ~/.local/bin if you keep them versioned in the repo
+# Example:
+# cp scripts/itnew ~/.local/bin/itnew
+# cp scripts/itops_ent ~/.local/bin/itops_ent
+# cp scripts/itdash ~/.local/bin/itdash
+chmod +x ~/.local/bin/itnew ~/.local/bin/itops_ent ~/.local/bin/itdash</code></pre>
+
+  <h3>7. Run</h3>
+  <pre><code>itops_ent</code></pre>
+</section>
+
+<section id="shortcuts">
+  <h2>Keyboard Shortcuts</h2>
+  <div class="table">
+    <div class="row head"><div>Key</div><div>Action</div></div>
+    <div class="row"><div>r</div><div>Refresh queue</div></div>
+    <div class="row"><div>n</div><div>New worklog entry</div></div>
+    <div class="row"><div>h</div><div>Set hold reason and move to Waiting</div></div>
+    <div class="row"><div>x</div><div>Resolve</div></div>
+    <div class="row"><div>c</div><div>Close</div></div>
+    <div class="row"><div>p</div><div>Toggle P1 and P2 filter</div></div>
+    <div class="row"><div>o / Enter</div><div>Open selected record folder</div></div>
+    <div class="row"><div>q</div><div>Quit</div></div>
+  </div>
+</section>
+
+<section id="links">
+  <h2>Links</h2>
   <p>
-    Local-first. Explicit. Deterministic.
-  </p>
-  <p>
-    The system avoids hidden automation, background services, or external SaaS
-    dependencies. All operations are traceable and queryable.
+    <a href="https://github.com/mikekellydev/itops-command-console" target="_blank" rel="noreferrer">GitHub repository</a>
   </p>
 </section>
 
-<section>
-  <h2>Repository</h2>
-  <p>
-    <a href="https://github.com/mikekellydev/itops-command-console" target="_blank">
-      View Source on GitHub
-    </a>
-  </p>
-</section>
+</main>
 
 <footer>
-  <p>© Michael Kelly | Sparkwave IT Service</p>
+  <div class="wrap">
+    <p>©2026 Michael Kelly | Sparkwave IT Service</p>
+  </div>
 </footer>
 
+<script src="script.js"></script>
 </body>
 </html>
