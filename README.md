@@ -1,119 +1,109 @@
 # ITOps Command Console
 
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
-![Language](https://img.shields.io/badge/python-3.10+-blue)
-![Database](https://img.shields.io/badge/database-SQLite-green)
-![UI](https://img.shields.io/badge/UI-Textual-purple)
+Local-first incident and operations tracking for terminal-first operators.
 
-![Status](https://img.shields.io/badge/status-Active%20Development-brightgreen)
+The project combines SQLite, Bash, tmux, and a Textual dashboard into a small command console for managing tickets, daily logs, and operational workflow without SaaS dependencies.
 
-A terminal-native operational command system designed to demonstrate structured systems thinking, clean architecture, and deterministic workflow control.
+## Why It Matters
 
-Built with:
+- Local-first: records stay on your machine.
+- Explicit: state changes are driven by visible SQL and simple scripts.
+- Fast: create a record, open the console, and move through the queue from the keyboard.
+- Portable: the repo is small enough to understand quickly and adapt for personal or team workflows.
 
-- SQLite (data integrity)
-- Python + Textual (TUI dashboard)
-- Bash (CLI tooling)
-- tmux (operator command console)
+## Stack
 
----
+- Python 3
+- Textual
+- SQLite
+- Bash
+- tmux
 
-## Why This Project Exists
+## Quick Start
 
-Modern operational tools are often:
+Target platform: Ubuntu LTS or WSL Ubuntu.
 
-- SaaS-dependent
-- Opaque in logic
-- Over-abstracted
-- Subscription-bound
+```bash
+git clone https://github.com/mikekellydev/itops-command-console.git
+cd itops-command-console
+./install.sh
+```
 
-ITOps Command Console demonstrates an alternative approach:
+After install:
 
-Local-first. Transparent. Deterministic. Durable.
+```bash
+itops_ent
+```
 
-This project reflects how I design internal systems: structured, minimal, maintainable, and predictable.
+Core commands:
 
----
-
-## What It Demonstrates
-
-- Schema-driven workflow architecture
-- Separation of concerns
-- Terminal-native UI engineering
-- Controlled state transitions
-- Explicit lifecycle management
-- Safe auto-increment key handling
-- tmux orchestration patterns
-- Clean CLI design
-
-This is not a prototype. It is an intentionally structured operational backbone.
-
----
-
-## System Architecture
-
-
-Database Layer (SQLite)
-↓
-CLI Intake Tools (Bash)
-↓
-Dashboard UI (Textual)
-↓
-tmux Command Console Layout
-
-
-Each layer is isolated.
-
-No hidden automation. No implicit behavior.
-
----
-
-## Capabilities
-
-- Structured ticket types (INC, SR, CHG, PRB, KB)
-- Priority + severity modeling
-- Worklog tracking
-- Folder-based record artifacts
-- Lifecycle state enforcement
-- High-priority filtering
-- Deterministic schema design
-
----
-
-## Example Workflow
-
-1. Create ticket
-
+```bash
 itnew
-
-
-2. Manage via dashboard
-
 itdash
+itops_ent
+```
 
+## Workflow
 
-3. Track lifecycle transitions
-4. Maintain structured worklogs
-5. Archive safely
+1. Run `itnew` to create a new record and matching Markdown artifact.
+2. Run `itdash` to manage the active queue from the terminal UI.
+3. Run `itops_ent` for the full tmux layout: dashboard, daily log, and shell.
+4. Keep long-form notes in the ticket file and short timeline entries in the database worklog.
 
----
+## Dashboard Keys
 
-## What This Signals
+- `/` focus search
+- `Esc` leave search
+- `r` refresh
+- `p` toggle P1/P2 filter
+- `i` toggle high-severity incident view
+- `n` add worklog entry
+- `h` place record on hold
+- `x` resolve record
+- `c` close record
+- `o` or `Enter` open the selected ticket file
+- `q` quit
 
-This project demonstrates:
+## Project Layout
 
-- Systems architecture mindset
-- Operational discipline
-- Terminal proficiency
-- Clean separation of concerns
-- Maintainable engineering patterns
+- `10_Tickets/` ticket folders grouped by type
+- `20_Areas/Daily/` daily operational notes
+- `80_Time/DB/` SQLite database location
+- `95_Tools/dashboard/` Textual app and Python dependencies
+- `Templates/` ticket and daily note templates
+- `docs/` architecture, examples, and launch notes
+- `docs/website/` static project page for GitHub Pages or other static hosting
 
-It is intended as a portfolio artifact and internal tool blueprint.
+## Public Repo Hygiene
 
----
+This repo is set up so runtime artifacts should stay local:
+
+- the SQLite database is ignored
+- daily logs are ignored
+- live ticket folders are ignored
+- the dashboard virtual environment is ignored
+
+Public examples live in:
+
+- [docs/examples/sample-ticket.md](docs/examples/sample-ticket.md)
+- [docs/examples/sample-daily-log.md](docs/examples/sample-daily-log.md)
+
+## Validation
+
+Manual smoke test:
+
+1. Run `itnew` and confirm a folder and DB record are created.
+2. Run `itdash` and confirm the new record appears.
+3. Use `n`, `h`, `x`, and `c` on a test record and confirm the state changes work.
+4. Run `sqlite3 "$ITOPS_DB" "select record_key,status from records order by opened_at desc limit 5;"` if you need a quick DB check.
+
+## Docs
+
+- [docs/index.md](docs/index.md)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/EVENT-LAUNCH-CHECKLIST.md](docs/EVENT-LAUNCH-CHECKLIST.md)
 
 ## Author
 
 Michael Kelly  
-GitHub: https://github.com/mikekellydev
+GitHub: <https://github.com/mikekellydev>

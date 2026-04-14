@@ -1,90 +1,97 @@
-# ITOps Command Console – Engineering Deep Dive
+# ITOps Command Console Architecture
 
-## Design Goals
+## Overview
 
-- Deterministic behavior
-- Minimal dependencies
-- Explicit SQL
-- Layer isolation
-- Offline-first operation
+The system is intentionally small:
 
----
+1. Bash creates records and launches the operator workspace.
+2. SQLite stores queue state and worklog history.
+3. Textual provides the active-queue interface.
+4. Markdown files hold longer operational notes.
 
-## Database Design
+That split keeps the workflow easy to understand and easy to debug.
 
-Core tables:
+## Core Components
 
-- records
-- worklog
-- counters
+### SQLite
 
-Design decisions:
+Primary tables:
 
-- SQLite WAL mode enabled
-- Atomic counter handling
-- Foreign key enforcement
-- Timestamp normalization
-- Explicit lifecycle states
+- `records` stores the ticket queue and lifecycle state
+- `worklog` stores timestamped operational notes
+- `counters` assigns the next numeric ID per record type
+- `time_entries` is reserved for future effort tracking
 
-Schema evolution handled via manual migrations.
+Design choices:
 
----
+- WAL mode for durability and responsiveness
+- explicit timestamps for lifecycle changes
+- simple schema that can be migrated forward with small installer updates
 
-## CLI Layer
+### CLI Layer
 
-itnew:
-- Prompts for metadata
-- Atomically increments counter
-- Creates ticket folder
-- Inserts record
-- Opens markdown template
-
-No hidden behavior.
-
----
-
-## Dashboard Layer
-
-Built with Textual.
+`itnew` is the intake path.
 
 Responsibilities:
 
-- Render queue
-- Handle key-driven state transitions
-- Write explicit DB updates
-- Provide deterministic filtering
+- validate record type, priority, severity, and title
+- atomically allocate the next key
+- create the matching folder and Markdown ticket
+- insert the initial database row
 
-No background threads beyond UI workers.
+`itops_ent` is the workspace launcher.
 
----
+Responsibilities:
 
-## Layout Layer
+- start or reattach the tmux session
+- open the dashboard
+- create today’s daily note from template if missing
+- leave a shell pane available for ad hoc commands
 
-tmux orchestrates:
+### Dashboard
 
-Top pane:
-- Dashboard (approx 60%)
+The Textual app is a queue manager, not a workflow engine.
 
-Bottom:
-- Daily log
-- Interactive shell
+Responsibilities:
 
-Layout isolated from business logic.
+- list active records
+- filter by priority, incident severity, and search text
+- write explicit state changes to the database
+- open the Markdown artifact for the selected record
 
----
+## Data Model
 
-## Future Enhancements
+Ticket identity follows:
 
-- Migration framework
-- Config-based layout profiles
-- SLA aging column
-- Structured export
-- Role-based profiles
+- `INC-0001`
+- `SR-0001`
+- `CHG-0001`
+- `PRB-0001`
+- `KB-0001`
 
----
+Lifecycle states currently used in the UI:
 
-## Philosophy
+- `New`
+- `In Progress`
+- `On Hold`
+- `Resolved`
+- `Closed`
 
-Clarity over abstraction.
-Explicit over implicit.
-Local control over cloud dependency.
+## Source Control Boundary
+
+The repository now separates source from operator state:
+
+- templates, code, docs, and examples are tracked
+- runtime DB files are not tracked
+- daily logs are not tracked
+- live ticket content is not tracked
+- local virtual environments are not tracked
+
+That keeps the repo safe to publish while preserving the local-first workflow.
+
+## Next Improvements
+
+- add automated tests around key allocation and status transitions
+- add a lightweight migration version table
+- expose record detail and worklog history directly in the dashboard
+- add export/report views for demos or handoff summaries

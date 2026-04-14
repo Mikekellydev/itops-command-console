@@ -2,11 +2,12 @@
 import os
 import sqlite3
 import subprocess
+import shutil
 from datetime import datetime
 from typing import List, Tuple, Optional
 
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Footer, DataTable, Input, Label
 from textual.reactive import reactive
 from textual.screen import ModalScreen
@@ -41,6 +42,13 @@ def exec_sql(db: str, sql: str, params: Tuple = ()) -> None:
         con.close()
 
 
+def pick_editor() -> Optional[str]:
+    for candidate in (os.getenv("VISUAL"), os.getenv("EDITOR"), "micro", "nano", "vim", "vi"):
+        if candidate and shutil.which(candidate):
+            return candidate
+    return None
+
+
 class PromptScreen(ModalScreen[Optional[str]]):
     """Modal prompt returning a string, or None on cancel."""
     DEFAULT_CSS = """
@@ -64,10 +72,10 @@ class PromptScreen(ModalScreen[Optional[str]]):
         self._default = default
 
     def compose(self) -> ComposeResult:
-        # Note: container id "box" comes from DEFAULT_CSS expectation
-        yield Label(self._title, id="title")
-        yield Input(placeholder=self._placeholder, id="inp")
-        yield Label("Enter to submit. Esc to cancel.", id="hint")
+        with Vertical(id="box"):
+            yield Label(self._title, id="title")
+            yield Input(placeholder=self._placeholder, id="inp")
+            yield Label("Enter to submit. Esc to cancel.", id="hint")
 
     def on_mount(self) -> None:
         inp = self.query_one("#inp", Input)
@@ -122,7 +130,7 @@ class ITOpsDashboard(App):
         yield Header(show_clock=True)
 
         yield Label(
-            "Keys: r refresh | p P1/P2 | i Incident View | n new log | h hold | x resolve | c close | o open | q quit"
+            "Keys: / search | Esc leave search | r refresh | p P1/P2 | i incident view | n new log | h hold | x resolve | c close | o/Enter open | q quit"
         )
 
         with Horizontal():
@@ -139,9 +147,7 @@ class ITOpsDashboard(App):
         t = self.query_one("#queue", DataTable)
         t.add_columns("Key", "Type", "Priority", "Severity", "Status", "Client", "Title")
         self.refresh_queue()
-
-        # Focus search so you can immediately type if you want.
-        self.query_one("#search", Input).focus()
+        t.focus()
 
     def refresh_queue(self) -> None:
         table = self.query_one("#queue", DataTable)
@@ -221,8 +227,11 @@ class ITOpsDashboard(App):
         folder = row[0]
         if folder and os.path.isdir(folder):
             ticket = os.path.join(folder, "ticket.md")
-            # Open ticket in micro
-            os.system(f'micro "{ticket}"')
+            editor = pick_editor()
+            if not editor:
+                self.notify("No editor found. Set $EDITOR or install micro/nano/vim.", severity="warning")
+                return
+            subprocess.run([editor, ticket], check=False)
         else:
             self.notify("Folder missing on disk", severity="warning")
 
@@ -333,6 +342,16 @@ class ITOpsDashboard(App):
 
     async def on_key(self, event: events.Key) -> None:
         k = event.key.lower()
+        focused = self.focused
+
+        if isinstance(focused, Input) and focused.id == "search":
+            if k == "escape":
+                self.query_one("#queue", DataTable).focus()
+            return
+
+        if k == "slash":
+            self.query_one("#search", Input).focus()
+            return
 
         if k == "q":
             self.exit()
@@ -353,6 +372,10 @@ class ITOpsDashboard(App):
             return
 
         if k == "o":
+            self.open_ticket_folder()
+            return
+
+        if k == "enter":
             self.open_ticket_folder()
             return
 

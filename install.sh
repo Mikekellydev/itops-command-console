@@ -18,14 +18,18 @@ DASHBOARD_DIR_REL="95_Tools/dashboard"
 DASHBOARD_DIR="$REPO_ROOT/$DASHBOARD_DIR_REL"
 DASHBOARD_PY="$DASHBOARD_DIR/itops_dashboard.py"
 VENV_DIR="$DASHBOARD_DIR/.venv"
-
-MICRO_BIN="$(command -v micro || true)"
+REQUIREMENTS_FILE="$DASHBOARD_DIR/requirements.txt"
+TICKET_TEMPLATE="$REPO_ROOT/Templates/ticket_template.md"
+DAILY_TEMPLATE="$REPO_ROOT/Templates/daily_template.md"
 
 log() { printf "\n[%s] %s\n" "$(date +%H:%M:%S)" "$*"; }
 die() { printf "\nERROR: %s\n" "$*" >&2; exit 1; }
 
 require_repo_files() {
   [[ -f "$DASHBOARD_PY" ]] || die "Missing dashboard file: $DASHBOARD_PY"
+  [[ -f "$REQUIREMENTS_FILE" ]] || die "Missing requirements file: $REQUIREMENTS_FILE"
+  [[ -f "$TICKET_TEMPLATE" ]] || die "Missing ticket template: $TICKET_TEMPLATE"
+  [[ -f "$DAILY_TEMPLATE" ]] || die "Missing daily template: $DAILY_TEMPLATE"
 }
 
 install_apt_deps() {
@@ -140,7 +144,7 @@ setup_venv() {
   # shellcheck disable=SC1090
   source "$VENV_DIR/bin/activate"
   pip install --upgrade pip
-  pip install textual rich
+  pip install -r "$REQUIREMENTS_FILE"
   deactivate
   log "Dashboard venv ready."
 }
@@ -163,7 +167,7 @@ install_itdash_wrapper() {
   cat > "$BIN_DIR/itdash" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-DB_PATH="\${DB_PATH:-$DB_PATH}"
+ITOPS_DB="\${ITOPS_DB:-\${DB_PATH:-$DB_PATH}}"
 REPO_ROOT="$REPO_ROOT"
 DASHBOARD_DIR="\$REPO_ROOT/$DASHBOARD_DIR_REL"
 VENV="\$DASHBOARD_DIR/.venv"
@@ -174,7 +178,7 @@ if [[ ! -x "\$VENV/bin/python" ]]; then
   exit 1
 fi
 
-export ITOPS_DB="\$DB_PATH"
+export ITOPS_DB
 exec "\$VENV/bin/python" "\$PY"
 EOF
   chmod +x "$BIN_DIR/itdash"
@@ -182,54 +186,42 @@ EOF
 
 install_itnew() {
   log "Installing itnew..."
-  cat > "$BIN_DIR/itnew" <<'EOF'
+  cat > "$BIN_DIR/itnew" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 
-DB="${ITOPS_DB:-$HOME/ITOps/80_Time/DB/itops_enterprise.db}"
-BASE="${ITOPS_HOME:-$HOME/ITOps}/10_Tickets"
+DB="\${ITOPS_DB:-$DB_PATH}"
+BASE="\${ITOPS_HOME:-$ITOPS_HOME}/10_Tickets"
+TEMPLATE="$TICKET_TEMPLATE"
 
-read -p "Record Type (INC/SR/CHG/PRB/KB): " TYPE
-TYPE="$(echo "$TYPE" | tr '[:lower:]' '[:upper:]')"
+die() { printf 'ERROR: %s\n' "\$*" >&2; exit 1; }
 
-read -p "Priority (P1-P4) [P3]: " PRI
-PRI="${PRI:-P3}"
-PRI="$(echo "$PRI" | tr '[:lower:]' '[:upper:]')"
+pick_editor() {
+  local editor
+  for editor in "\${VISUAL:-}" "\${EDITOR:-}" micro nano vim vi; do
+    if [[ -n "\$editor" ]] && command -v "\$editor" >/dev/null 2>&1; then
+      printf '%s\n' "\$editor"
+      return 0
+    fi
+  done
+  return 1
+}
 
-read -p "Severity (SEV1-SEV4) [SEV3]: " SEV
-SEV="${SEV:-SEV3}"
-SEV="$(echo "$SEV" | tr '[:lower:]' '[:upper:]')"
+render_ticket() {
+  local dest="\$1"
+  if [[ -f "\$TEMPLATE" ]]; then
+    local esc_key esc_title
+    esc_key="\$(printf '%s' "\$KEY" | sed 's/[\\/&]/\\\\&/g')"
+    esc_title="\$(printf '%s' "\$TITLE" | sed 's/[\\/&]/\\\\&/g')"
+    sed \
+      -e "s/{{KEY}}/\$esc_key/g" \
+      -e "s/{{TITLE}}/\$esc_title/g" \
+      "\$TEMPLATE" > "\$dest"
+    return
+  fi
 
-read -p "Client [Internal]: " CLIENT
-CLIENT="${CLIENT:-Internal}"
-
-read -p "Title: " TITLE
-
-# Ensure counters exists (self healing)
-sqlite3 "$DB" <<SQL
-BEGIN;
-CREATE TABLE IF NOT EXISTS counters (record_type TEXT PRIMARY KEY, next_num INTEGER NOT NULL);
-COMMIT;
-SQL
-
-# Atomic increment
-NUM="$(sqlite3 "$DB" <<SQL
-BEGIN IMMEDIATE;
-INSERT OR IGNORE INTO counters (record_type, next_num) VALUES ('$TYPE', 1);
-SELECT next_num FROM counters WHERE record_type='$TYPE';
-UPDATE counters SET next_num = next_num + 1 WHERE record_type='$TYPE';
-COMMIT;
-SQL
-)"
-
-PADDED="$(printf "%04d" "$NUM")"
-KEY="${TYPE}-${PADDED}"
-
-FOLDER="$BASE/$TYPE/$KEY"
-mkdir -p "$FOLDER"
-
-cat > "$FOLDER/ticket.md" <<EOF2
-# $KEY – $TITLE
+  cat > "\$dest" <<EOF2
+# \$KEY - \$TITLE
 
 ## Summary
 
@@ -238,27 +230,84 @@ cat > "$FOLDER/ticket.md" <<EOF2
 ## Actions
 
 ## Resolution
-
 EOF2
+}
+
+[[ -f "\$DB" ]] || die "Database not found at \$DB. Run ./install.sh first."
+mkdir -p "\$BASE"
+
+read -p "Record Type (INC/SR/CHG/PRB/KB): " TYPE
+TYPE="\$(echo "\$TYPE" | tr '[:lower:]' '[:upper:]')"
+case "\$TYPE" in
+  INC|SR|CHG|PRB|KB) ;;
+  *) die "Record type must be one of: INC, SR, CHG, PRB, KB" ;;
+esac
+
+read -p "Priority (P1-P4) [P3]: " PRI
+PRI="\${PRI:-P3}"
+PRI="\$(echo "\$PRI" | tr '[:lower:]' '[:upper:]')"
+case "\$PRI" in
+  P1|P2|P3|P4) ;;
+  *) die "Priority must be one of: P1, P2, P3, P4" ;;
+esac
+
+read -p "Severity (SEV1-SEV4) [SEV3]: " SEV
+SEV="\${SEV:-SEV3}"
+SEV="\$(echo "\$SEV" | tr '[:lower:]' '[:upper:]')"
+case "\$SEV" in
+  SEV1|SEV2|SEV3|SEV4) ;;
+  *) die "Severity must be one of: SEV1, SEV2, SEV3, SEV4" ;;
+esac
+
+read -p "Client [Internal]: " CLIENT
+CLIENT="\${CLIENT:-Internal}"
+
+read -p "Title: " TITLE
+[[ -n "\${TITLE// }" ]] || die "Title is required."
+
+# Ensure counters exists (self healing)
+sqlite3 "\$DB" <<SQL
+BEGIN;
+CREATE TABLE IF NOT EXISTS counters (record_type TEXT PRIMARY KEY, next_num INTEGER NOT NULL);
+COMMIT;
+SQL
+
+# Atomic increment
+NUM="\$(sqlite3 "\$DB" <<SQL
+BEGIN IMMEDIATE;
+INSERT OR IGNORE INTO counters (record_type, next_num) VALUES ('\$TYPE', 1);
+SELECT next_num FROM counters WHERE record_type='\$TYPE';
+UPDATE counters SET next_num = next_num + 1 WHERE record_type='\$TYPE';
+COMMIT;
+SQL
+)"
+
+PADDED="\$(printf "%04d" "\$NUM")"
+KEY="\${TYPE}-\${PADDED}"
+
+FOLDER="\$BASE/\$TYPE/\$KEY"
+mkdir -p "\$FOLDER"
+
+render_ticket "\$FOLDER/ticket.md"
 
 # Escape single quotes for SQLite
-ESC_TITLE="$(printf "%s" "$TITLE" | sed "s/'/''/g")"
-ESC_CLIENT="$(printf "%s" "$CLIENT" | sed "s/'/''/g")"
+ESC_TITLE="\$(printf "%s" "\$TITLE" | sed "s/'/''/g")"
+ESC_CLIENT="\$(printf "%s" "\$CLIENT" | sed "s/'/''/g")"
 
-sqlite3 "$DB" <<SQL
+sqlite3 "\$DB" <<SQL
 INSERT INTO records (
   record_key, record_type, priority, severity, status, client, title, description, folder_path, opened_at, updated_at
 ) VALUES (
-  '$KEY', '$TYPE', '$PRI', '$SEV', 'New', '$ESC_CLIENT', '$ESC_TITLE', '', '$FOLDER',
+  '\$KEY', '\$TYPE', '\$PRI', '\$SEV', 'New', '\$ESC_CLIENT', '\$ESC_TITLE', '', '\$FOLDER',
   datetime('now','localtime'), datetime('now','localtime')
 );
 SQL
 
-echo "Created $KEY"
-if command -v micro >/dev/null 2>&1; then
-  micro "$FOLDER/ticket.md"
+echo "Created \$KEY"
+if editor="\$(pick_editor)"; then
+  "\$editor" "\$FOLDER/ticket.md"
 else
-  echo "micro not found. Open file: $FOLDER/ticket.md"
+  echo "No editor found. Open file: \$FOLDER/ticket.md"
 fi
 EOF
   chmod +x "$BIN_DIR/itnew"
@@ -273,10 +322,34 @@ set -euo pipefail
 SESSION="itops_ent"
 ITOPS_HOME="\${ITOPS_HOME:-$ITOPS_HOME}"
 DB_PATH="\${ITOPS_DB:-$DB_PATH}"
+DAILY_TEMPLATE="$DAILY_TEMPLATE"
+
+pick_editor() {
+  local editor
+  for editor in "\${VISUAL:-}" "\${EDITOR:-}" micro nano vim vi; do
+    if [[ -n "\$editor" ]] && command -v "\$editor" >/dev/null 2>&1; then
+      printf '%s\n' "\$editor"
+      return 0
+    fi
+  done
+  return 1
+}
+
+EDITOR_CMD="\$(pick_editor || true)"
+DAILY_FILE="\$ITOPS_HOME/20_Areas/Daily/\$(date +%F).md"
 
 # If session exists, attach
 if tmux has-session -t "\$SESSION" 2>/dev/null; then
   exec tmux attach -t "\$SESSION"
+fi
+
+mkdir -p "\$ITOPS_HOME/20_Areas/Daily"
+if [[ ! -f "\$DAILY_FILE" ]]; then
+  if [[ -f "\$DAILY_TEMPLATE" ]]; then
+    sed "s/{{DATE}}/\$(date +%F)/g" "\$DAILY_TEMPLATE" > "\$DAILY_FILE"
+  else
+    printf '# Daily Log %s\n\n## Today focus\n\n1.\n2.\n3.\n\n## Task Work Log\nTime   Task   Work Done\n\n## Notes worth keeping\n' "\$(date +%F)" > "\$DAILY_FILE"
+  fi
 fi
 
 # Create new session
@@ -290,7 +363,11 @@ tmux split-window -h -p 50 -t "\$SESSION:0.1"
 tmux send-keys -t "\$SESSION:0.0" "export ITOPS_DB=\"\$DB_PATH\"; itdash" C-m
 
 # Bottom-left: daily note
-tmux send-keys -t "\$SESSION:0.1" "cd \"\$ITOPS_HOME\" && mkdir -p 20_Areas/Daily && micro \"\$ITOPS_HOME/20_Areas/Daily/\$(date +%F).md\"" C-m
+if [[ -n "\$EDITOR_CMD" ]]; then
+  tmux send-keys -t "\$SESSION:0.1" "cd \"\$ITOPS_HOME\" && \"\$EDITOR_CMD\" \"\$DAILY_FILE\"" C-m
+else
+  tmux send-keys -t "\$SESSION:0.1" "cd \"\$ITOPS_HOME\" && less \"\$DAILY_FILE\"" C-m
+fi
 
 # Bottom-right: shell
 tmux send-keys -t "\$SESSION:0.2" "cd \"\$ITOPS_HOME\" && clear" C-m

@@ -1,15 +1,20 @@
-# ITOps Command Console
+# ITOps Command Console Docs
 
-A terminal native ops workflow using tmux, SQLite, and Textual.
+## Start Here
 
-## What it does
-- Tracks incidents and service requests in SQLite
-- Provides a Textual dashboard for active queue management
-- Generates ticket folders and templates
-- Runs in an operator tmux command console layout
+- [README.md](../README.md) for install and everyday usage
+- [ARCHITECTURE.md](ARCHITECTURE.md) for system design notes
+- [EVENT-LAUNCH-CHECKLIST.md](EVENT-LAUNCH-CHECKLIST.md) for the pre-demo/public push checklist
 
-## Quick start
-See the README in the repo for install and run steps.
+## Safe Public Examples
 
-## Screenshots
-Add screenshots here.
+- [sample-ticket.md](examples/sample-ticket.md)
+- [sample-daily-log.md](examples/sample-daily-log.md)
+
+## Repo Intent
+
+This repository is meant to show:
+
+- terminal-first workflow design
+- clean separation between runtime state and source-controlled assets
+- a small but complete local-first operations stack
